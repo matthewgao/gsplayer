@@ -1,5 +1,6 @@
 CFLAGS=`pkg-config --cflags libavformat libavutil sdl2`
 LIBS= `pkg-config --libs libavformat libavutil sdl2`
+STD=-std=c++0x
 
 SRC_DIR :=.
 OBJ_DIR :=.
@@ -17,10 +18,10 @@ OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
 %.o:%.cpp
 	echo $(CFLAGS)
-	g++ $(CFLAGS) $(LIBS) -c -o $@ $<
+	g++ $(CFLAGS) $(LIBS) $(STD) -c -o $@ $<
 
 main:$(OBJ_FILES)
-	g++ $(CFLAGS) $(LIBS) -o $@ $^
+	g++ $(CFLAGS) $(LIBS) $(STD)  -o $@ $^
 
 all:main
 	# g++ main.cpp -o main $(CFLAGS) $(LIBS)

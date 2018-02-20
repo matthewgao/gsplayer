@@ -23,6 +23,7 @@ void Display::ShowFrame(){
     SDL_SetRenderTarget(this->renderer, this->texture);
     SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
     SDL_RenderPresent(this->renderer);
+    // SDL_Delay(30);
     return;
 }
 

@@ -1,4 +1,5 @@
 #include "decoder.h"
+#include <chrono>
 
 MediaDecoder::MediaDecoder(string file):m_video_index(-1),m_audio_index(-1){
     this->m_audio_frame = make_shared<list<AVFrame*> >();
@@ -48,10 +49,11 @@ MediaDecoder::MediaDecoder(string file):m_video_index(-1),m_audio_index(-1){
     av_dump_format(this->m_format_context, 0, file.c_str(), 0);  
     cout<<"-------------------------------------------------"<<endl;
 
+    this->m_display = make_shared<Display>(this->m_video_width, this->m_video_height); 
+    this->m_time_base = this->m_format_context->streams[this->m_video_index]->time_base;
+    this->m_start_time = 0;
 }
-// MediaDecoder::MediaDecoder(string file){
-//     MediaDecoder();
-// }
+
 MediaDecoder::~MediaDecoder(){
     avformat_close_input(&(this->m_format_context));
     avformat_free_context(this->m_format_context);
@@ -64,14 +66,102 @@ AVFrame* MediaDecoder::GetAFrame(){
 }
 
 void MediaDecoder::Flush(){}
-void MediaDecoder::PushFrame(AVFrame *frame){
+void MediaDecoder::PushVideoFrame(AVFrame *frame){
     if(frame == nullptr){
         return;
     }
-    // if (frame->stream)
+    
+    // cout<<"size"<<this->m_video_frame->size()<<endl;
+    while(this->m_video_frame->size() > 10){
+        // cout<<"sleep 200ms"<<endl;
+        this_thread::sleep_for(chrono::milliseconds(200));
+    }
+
+    lock_guard<std::mutex> guard(this->m_video_list_mutex);
+    this->m_video_frame->push_back(frame);
+    this->m_video_cv.notify_all();
 }
 
-AVFrame* MediaDecoder::PopFrame(){
-    return nullptr;
+AVFrame* MediaDecoder::PopVideoFrame(){
+    // lock_guard<std::mutex> guard(this->m_video_list_mutex);
+    std::unique_lock<std::mutex> lk(this->m_video_list_mutex);
+    if(this->m_video_frame->empty()){
+        // std::cerr << "Waiting... \n";
+        this->m_video_cv.wait(lk);
+        // this->m_video_cv.wait(lk, [&]{return !this->m_video_frame->empty();});
+        // std::cerr << "...finished waiting. not empty\n";
+    }
+    AVFrame *f = this->m_video_frame->front();
+    this->m_video_frame->pop_front();
+    return f;
 }
-void MediaDecoder::ShowFrame(){}
+
+void MediaDecoder::ShowFrame(){
+    while(true){
+        AVFrame* frame = this->PopVideoFrame();
+        //PTS control
+        if(this->m_start_time == 0){
+            this->m_start_time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+            this->m_display->SetTexture(frame);
+            this->m_display->ShowFrame();
+            av_frame_unref(frame);
+            av_frame_free(&frame);
+        }else{
+            // cout<<"show "<<av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)<<endl;
+            int64_t pts = av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)*1000;
+            int64_t now = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+            // cout<<"show "<<pts<<" "<<now<<endl;
+            int64_t need_sleep = this->m_start_time + int64_t(pts) - now;
+            this->m_display->SetTexture(frame);
+            // cout<<"time to wait "<<need_sleep<<endl;
+            if (need_sleep > 0){
+                this_thread::sleep_for(chrono::milliseconds(need_sleep));
+            }
+            this->m_display->ShowFrame();
+            av_frame_unref(frame);
+            av_frame_free(&frame);
+        }
+    }
+}
+
+void MediaDecoder::Decoder(){
+    AVFrame *pFrame = av_frame_alloc();
+    for(;;){
+        AVPacket *pPacket = av_packet_alloc();
+        if (av_read_frame(this->m_format_context, pPacket) < 0){
+            cout<<"end"<<endl;
+            break;
+        }
+
+        if (pPacket->stream_index == this->m_video_index) {
+            int ret = avcodec_send_packet(this->m_codec_v_context, pPacket);
+            if (ret != 0){
+                cerr<<"fail to send packet: "<<ret<<endl;
+                continue;
+            }
+
+            ret = avcodec_receive_frame(this->m_codec_v_context, pFrame);
+            if (ret == AVERROR(EAGAIN)){
+                cerr<<"try again: "<<ret<<av_err2str(ret)<<endl;
+                continue;
+            }
+
+            if (ret != 0){
+                cerr<<"fail to receive packet: "<<ret<<av_err2str(ret)<<endl;
+                break;
+            }
+
+            AVFrame* newFrame = av_frame_clone(pFrame);
+            this->PushVideoFrame(newFrame);
+        }
+        // cout<<"key_frame:"<<pFrame->key_frame<<endl;
+        // dis->SetTexture(pFrame);
+        // dis->ShowFrame();               
+
+        // cout<<"data:"<<pFrame->data[0]<<endl;
+        // printHexPoint(pFrame, 2, 10);
+        // av_packet_unref(pPacket);
+        av_packet_free(&pPacket);
+        av_frame_unref(pFrame);
+    }
+}
