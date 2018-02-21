@@ -9,6 +9,7 @@ extern "C" {
 }
 #include <stdio.h>
 #include <iostream>
+#include <thread>
 
 using namespace std;
 
@@ -19,6 +20,9 @@ public:
     ~Display();
     void ShowFrame();
     bool SetTexture(AVFrame *frame);
+    bool ShouldExit(){return this->m_should_exit;}
+    void ListenEvent();
+
 private:
     int SDLInit(SDL_Window **window, SDL_Renderer **renderer);
     SDL_Window *window;
@@ -26,4 +30,5 @@ private:
     SDL_Texture *texture;
     int height;
     int width;
+    bool m_should_exit;
 };

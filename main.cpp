@@ -12,12 +12,21 @@ using namespace std;
 
 void printHexPoint(AVFrame*, int, int);
 
-int main(){
-    // shared_ptr<MediaDecoder> decoder = make_shared<MediaDecoder>("SD.mp4");
-    shared_ptr<MediaDecoder> decoder = make_shared<MediaDecoder>("sully.mp4");
+int main(int argc, char *argv[]){
+    if (argc < 2){
+        cout<<"missing file"<<endl;
+        exit(-1);
+    }
+    string file(argv[1]);
+
+    shared_ptr<MediaDecoder> decoder = make_shared<MediaDecoder>(file);
+    // shared_ptr<MediaDecoder> decoder = make_shared<MediaDecoder>("sully.mp4");
     std::thread t1(bind(&MediaDecoder::Decoder,decoder));
     std::thread t2(bind(&MediaDecoder::ShowFrame,decoder));
-    t1.join();
+
+    decoder->Polling();
+
+    t1.detach();
     t2.detach();
     return 0;
 }

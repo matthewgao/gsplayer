@@ -30,6 +30,7 @@ public:
     AVFrame* PopVideoFrame();
     void ShowFrame();
     void Decoder();
+    void Polling();
 
     AVFormatContext* GetFormatCtx(){
         return this->m_format_context;

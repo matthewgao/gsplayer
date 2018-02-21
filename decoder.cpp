@@ -49,7 +49,8 @@ MediaDecoder::MediaDecoder(string file):m_video_index(-1),m_audio_index(-1){
     av_dump_format(this->m_format_context, 0, file.c_str(), 0);  
     cout<<"-------------------------------------------------"<<endl;
 
-    this->m_display = make_shared<Display>(this->m_video_width, this->m_video_height); 
+    this->m_display = make_shared<Display>(this->m_video_width, this->m_video_height);
+
     this->m_time_base = this->m_format_context->streams[this->m_video_index]->time_base;
     this->m_start_time = 0;
 }
@@ -97,7 +98,7 @@ AVFrame* MediaDecoder::PopVideoFrame(){
 }
 
 void MediaDecoder::ShowFrame(){
-    while(true){
+    while(!this->m_display->ShouldExit()){
         AVFrame* frame = this->PopVideoFrame();
         //PTS control
         if(this->m_start_time == 0){
@@ -126,7 +127,7 @@ void MediaDecoder::ShowFrame(){
 
 void MediaDecoder::Decoder(){
     AVFrame *pFrame = av_frame_alloc();
-    for(;;){
+    while(!this->m_display->ShouldExit()){
         AVPacket *pPacket = av_packet_alloc();
         if (av_read_frame(this->m_format_context, pPacket) < 0){
             cout<<"end"<<endl;
@@ -164,4 +165,8 @@ void MediaDecoder::Decoder(){
         av_packet_free(&pPacket);
         av_frame_unref(pFrame);
     }
+}
+
+void MediaDecoder::Polling(){
+    this->m_display->ListenEvent();
 }

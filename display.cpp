@@ -6,22 +6,27 @@ Display::Display(){
     Display(1280, 800);
 }
 
-Display::Display(int width, int height):width(width),height(height){
+Display::Display(int width, int height):width(width),height(height),m_should_exit(false){
     if(this->SDLInit(&(this->window), &(this->renderer))!=0){
         cerr<<"fail to open windows: "<<endl;
         exit(127);
     }
 
-    this->texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, width, height);
-    if (this->texture == NULL) {
+    this->texture = SDL_CreateTexture(this->renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING, width, height);
+    if (this->texture == nullptr) {
         fprintf(stderr, "CreateTextureFromSurface failed: %s\n", SDL_GetError());
         exit(1);
     }
+    SDL_SetRenderTarget(this->renderer, this->texture);
+    // std::thread t1(bind(&Display::ListenEvent,this));
+    // t1.detach();
 }
 
 void Display::ShowFrame(){
-    SDL_SetRenderTarget(this->renderer, this->texture);
-    SDL_RenderCopy(this->renderer, this->texture, NULL, NULL);
+    SDL_RenderClear(this->renderer);
+    // SDL_SetWindowTitle(this->window, "hahahha");
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderCopy(this->renderer, this->texture, nullptr, nullptr);
     SDL_RenderPresent(this->renderer);
     // SDL_Delay(30);
     return;
@@ -39,19 +44,51 @@ bool Display::SetTexture(AVFrame *frame){
 
 Display::~Display(){
     SDL_DestroyTexture(this->texture);
+    SDL_DestroyWindow(this->window);
 }
 
 int Display::SDLInit(SDL_Window **window, SDL_Renderer **renderer){
     int ret = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
     if (ret != 0) {
         SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
+        SDL_Quit();
         return 1;
     }
 
-    if (SDL_CreateWindowAndRenderer(this->width, this->height, SDL_WINDOW_RESIZABLE, window, renderer)!=0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
-        return 3;
+    *window = SDL_CreateWindow("GsPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN);
+    if (*window == nullptr){
+        SDL_Log("Unable to initialize windows: %s", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (*renderer == nullptr){
+        SDL_DestroyWindow(*window);
+        SDL_Log("Unable to initialize render: %s", SDL_GetError());
+        SDL_Quit();
+        return 1;
     }
 
+    // if (SDL_CreateWindowAndRenderer(this->width, this->height, SDL_WINDOW_RESIZABLE, window, renderer)!=0) {
+    //     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
+    //     return 3;
+    // }
+
     return 0;
+}
+
+void Display::ListenEvent(){
+    SDL_Event e;
+    while( !this->m_should_exit )
+    {
+        if (SDL_PollEvent( &e ) == 0){
+            this_thread::sleep_for(chrono::milliseconds(200));
+        }
+        //User requests quit
+        if( e.type == SDL_QUIT )
+        {
+            this->m_should_exit = true;
+        }
+    }
 }
