@@ -20,14 +20,14 @@ int main(int argc, char *argv[]){
     string file(argv[1]);
 
     shared_ptr<MediaDecoder> decoder = make_shared<MediaDecoder>(file);
-    // shared_ptr<MediaDecoder> decoder = make_shared<MediaDecoder>("sully.mp4");
-    std::thread t1(bind(&MediaDecoder::Decoder,decoder));
-    std::thread t2(bind(&MediaDecoder::ShowFrame,decoder));
-
-    decoder->Polling();
-
+    decoder->PlaySound();
+    std::thread t1(bind(&MediaDecoder::Decoder, decoder));
+    std::thread t2(bind(&MediaDecoder::ShowFrame, decoder));
+    
     t1.detach();
     t2.detach();
+    // decoder->PlaySound();
+    decoder->Polling();
     return 0;
 }
 

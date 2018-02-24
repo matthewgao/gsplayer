@@ -4,9 +4,11 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/frame.h>
 #include <libavutil/imgutils.h>
+// #include "libswresample/swresample.h" 
 }
 #include <stdio.h>
 #include "display.h"
+#include "audioplay.h"
 #include <iostream>
 #include <string>
 #include <list>
@@ -16,8 +18,14 @@ extern "C" {
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+#include <SDL_audio.h>
+#include <SDL.h>
+
+// #define MAX_AUDIO_FRAME_SIZE 192000
 
 using namespace std;
+
+class AudioPlay;
 
 class MediaDecoder{
 public:
@@ -28,9 +36,16 @@ public:
     void Flush();
     void PushVideoFrame(AVFrame *frame);
     AVFrame* PopVideoFrame();
+
+    void PushAudioFrame(AVFrame *frame);
+    AVFrame* PopAudioFrame();
+
     void ShowFrame();
     void Decoder();
     void Polling();
+    void PlaySound();
+
+    // void InitAudioDevice();
 
     AVFormatContext* GetFormatCtx(){
         return this->m_format_context;
@@ -48,6 +63,12 @@ public:
         return this->m_video_width;
     }
 
+    // struct SwrContext *GetSwrContext(){
+    //     return this->m_au_convert_ctx;
+    // }
+
+    // static void AudioCallback(void*  userdata, Uint8* stream,int len);
+
     //mutex is not copyable so MediaDecoder must not copyable either
     MediaDecoder (const MediaDecoder&) = delete;
     MediaDecoder& operator= (const MediaDecoder&) = delete;
@@ -63,12 +84,16 @@ private:
     AVCodec *m_v_codec;
     AVCodec *m_a_codec;
     AVCodecContext *m_codec_v_context;
+    AVCodecContext *m_codec_a_context;
     AVCodecParameters *m_codec_v_params;
+    AVCodecParameters *m_codec_a_params;
     mutex m_video_list_mutex;
     mutex m_audio_list_mutex;
     condition_variable_any m_video_cv;
     condition_variable_any m_audio_cv;
     shared_ptr<Display> m_display;
+    shared_ptr<AudioPlay> m_audioplay;
     AVRational m_time_base;
     int64_t m_start_time;
+    // struct SwrContext *m_au_convert_ctx;
 };

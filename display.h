@@ -10,10 +10,11 @@ extern "C" {
 #include <stdio.h>
 #include <iostream>
 #include <thread>
+#include "sdlbase.h"
 
 using namespace std;
 
-class Display {
+class Display : public SDLBase{
 public:
     Display();
     Display(int width, int height);
@@ -21,7 +22,7 @@ public:
     void ShowFrame();
     bool SetTexture(AVFrame *frame);
     bool ShouldExit(){return this->m_should_exit;}
-    void ListenEvent();
+    // void ListenEvent();
 
 private:
     int SDLInit(SDL_Window **window, SDL_Renderer **renderer);
@@ -30,5 +31,5 @@ private:
     SDL_Texture *texture;
     int height;
     int width;
-    bool m_should_exit;
+    // bool m_should_exit;
 };

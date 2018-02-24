@@ -6,7 +6,7 @@ Display::Display(){
     Display(1280, 800);
 }
 
-Display::Display(int width, int height):width(width),height(height),m_should_exit(false){
+Display::Display(int width, int height):width(width),height(height){
     if(this->SDLInit(&(this->window), &(this->renderer))!=0){
         cerr<<"fail to open windows: "<<endl;
         exit(127);
@@ -18,8 +18,6 @@ Display::Display(int width, int height):width(width),height(height),m_should_exi
         exit(1);
     }
     SDL_SetRenderTarget(this->renderer, this->texture);
-    // std::thread t1(bind(&Display::ListenEvent,this));
-    // t1.detach();
 }
 
 void Display::ShowFrame(){
@@ -48,12 +46,12 @@ Display::~Display(){
 }
 
 int Display::SDLInit(SDL_Window **window, SDL_Renderer **renderer){
-    int ret = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
-    if (ret != 0) {
-        SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
+    // int ret = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
+    // if (ret != 0) {
+    //     SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
+    //     SDL_Quit();
+    //     return 1;
+    // }
 
     *window = SDL_CreateWindow("GsPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN);
     if (*window == nullptr){
@@ -78,17 +76,17 @@ int Display::SDLInit(SDL_Window **window, SDL_Renderer **renderer){
     return 0;
 }
 
-void Display::ListenEvent(){
-    SDL_Event e;
-    while( !this->m_should_exit )
-    {
-        if (SDL_PollEvent( &e ) == 0){
-            this_thread::sleep_for(chrono::milliseconds(200));
-        }
-        //User requests quit
-        if( e.type == SDL_QUIT )
-        {
-            this->m_should_exit = true;
-        }
-    }
-}
+// void Display::ListenEvent(){
+//     SDL_Event e;
+//     while( !this->m_should_exit )
+//     {
+//         if (SDL_PollEvent( &e ) == 0){
+//             this_thread::sleep_for(chrono::milliseconds(200));
+//         }
+//         //User requests quit
+//         if( e.type == SDL_QUIT )
+//         {
+//             this->m_should_exit = true;
+//         }
+//     }
+// }
