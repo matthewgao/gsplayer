@@ -1,4 +1,6 @@
 #include "audioplay.h"
+#include <iostream>
+#include "decoder.h"
 
 AudioPlay::AudioPlay(AVCodecContext *codec_a_context, MediaDecoder* decoder):
     m_codec_a_context(codec_a_context),

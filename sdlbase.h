@@ -24,6 +24,7 @@ public:
         }
     }
     void ListenEvent();
+    bool ShouldExit(){return this->m_should_exit;}
 protected:
     bool m_should_exit;
 };

@@ -3,10 +3,10 @@ extern "C" {
 #include <libavutil/frame.h>
 }
 #include <stdio.h>
-#include "display.h"
-#include "decoder.h"
 #include <iostream>
 #include <functional>
+#include "display.h"
+#include "decoder.h"
 
 using namespace std;
 

@@ -4,24 +4,22 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/frame.h>
 #include <libavutil/imgutils.h>
-// #include "libswresample/swresample.h" 
 }
-#include <stdio.h>
-#include "display.h"
-#include "audioplay.h"
+
 #include <iostream>
 #include <string>
 #include <list>
 #include <memory>
-#include <stdio.h>
 #include <iostream>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+
 #include <SDL_audio.h>
 #include <SDL.h>
 
-// #define MAX_AUDIO_FRAME_SIZE 192000
+#include "display.h"
+#include "audioplay.h"
 
 using namespace std;
 
@@ -45,8 +43,6 @@ public:
     void Polling();
     void PlaySound();
 
-    // void InitAudioDevice();
-
     AVFormatContext* GetFormatCtx(){
         return this->m_format_context;
     }
@@ -62,12 +58,6 @@ public:
     int GetWidth(){
         return this->m_video_width;
     }
-
-    // struct SwrContext *GetSwrContext(){
-    //     return this->m_au_convert_ctx;
-    // }
-
-    // static void AudioCallback(void*  userdata, Uint8* stream,int len);
 
     //mutex is not copyable so MediaDecoder must not copyable either
     MediaDecoder (const MediaDecoder&) = delete;
@@ -95,5 +85,4 @@ private:
     shared_ptr<AudioPlay> m_audioplay;
     AVRational m_time_base;
     int64_t m_start_time;
-    // struct SwrContext *m_au_convert_ctx;
 };

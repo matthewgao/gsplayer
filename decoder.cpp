@@ -67,13 +67,10 @@ MediaDecoder::MediaDecoder(string file):m_video_index(-1),m_audio_index(-1){
     cout<<"-------------------------------------------------"<<endl;
 
     this->m_display = make_shared<Display>(this->m_video_width, this->m_video_height);
+    this->m_audioplay = make_shared<AudioPlay>(this->m_codec_a_context, this);
 
     this->m_time_base = this->m_format_context->streams[this->m_video_index]->time_base;
     this->m_start_time = 0;
-
-    // this->InitAudioDevice();
-    this->m_audioplay = make_shared<AudioPlay>(this->m_codec_a_context, this);
-    // this->m_out_a_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FRAME_SIZE*2);
 }
 
 MediaDecoder::~MediaDecoder(){
@@ -124,21 +121,21 @@ void MediaDecoder::ShowFrame(){
         AVFrame* frame = this->PopVideoFrame();
         //PTS control
         if(this->m_start_time == 0){
-            this->m_start_time = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+            this->m_start_time = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count();
             this->m_display->SetTexture(frame);
             this->m_display->ShowFrame();
             av_frame_unref(frame);
             av_frame_free(&frame);
         }else{
             // cout<<"show "<<av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)<<endl;
-            int64_t pts = av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)*1000;
-            int64_t now = chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+            int64_t pts = av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)*1000*1000;
+            int64_t now = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count();
             // cout<<"show "<<pts<<" "<<now<<endl;
             int64_t need_sleep = this->m_start_time + int64_t(pts) - now;
             this->m_display->SetTexture(frame);
             // cout<<"time to wait "<<need_sleep<<endl;
             if (need_sleep > 0){
-                this_thread::sleep_for(chrono::milliseconds(need_sleep));
+                this_thread::sleep_for(chrono::microseconds(need_sleep));
             }
             this->m_display->ShowFrame();
             av_frame_unref(frame);
@@ -224,7 +221,6 @@ void MediaDecoder::PushAudioFrame(AVFrame *frame){
     
     lock_guard<std::mutex> guard(this->m_audio_list_mutex);
     this->m_audio_frame->push_back(frame);
-    // this->m_video_cv.notify_all();
 }
 
 AVFrame* MediaDecoder::PopAudioFrame(){
@@ -238,58 +234,3 @@ AVFrame* MediaDecoder::PopAudioFrame(){
     this->m_audio_frame->pop_front();
     return f;
 }
-
-
-// void MediaDecoder::AudioCallback(void* userdata, Uint8* stream,int len){
-//     SDL_memset(stream, 0, len);
-//     MediaDecoder* md = (MediaDecoder*)userdata;
-//     AVFrame *f = md->PopAudioFrame();
-//     if(f == nullptr){
-//         return;
-//     }
-
-//     uint8_t* out_a_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FRAME_SIZE*2);
-//     int buffer_size = av_samples_get_buffer_size(NULL, 2 ,f->nb_samples,AV_SAMPLE_FMT_S16, 1);
-//     swr_convert(md->GetSwrContext(), &(out_a_buffer), MAX_AUDIO_FRAME_SIZE, (const uint8_t **)f->data, f->nb_samples);
-//     cout<<"callback len "<<len<<endl;
-//     cout<<"callback lnb_samplesen "<<f->nb_samples<<endl;
-//     cout<<"buffer size "<<buffer_size<<endl;
-//     SDL_MixAudio(stream, out_a_buffer, buffer_size, 100);
-//     // SDL_MixAudio(stream, f->data[1], f->linesize[1], 100);
-//     av_free(out_a_buffer);
-//     av_frame_unref(f);
-//     av_frame_free(&f);
-// }
-
-// void MediaDecoder::InitAudioDevice(){
-//     SDL_AudioSpec want;
-//     SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
-
-//     want.freq = this->m_codec_a_context->sample_rate;
-//     want.format = AUDIO_S16SYS;
-//     want.channels = this->m_codec_a_context->channels;
-//     want.samples = this->m_codec_a_context->frame_size;
-//     want.silence = 0;
-//     want.callback = MediaDecoder::AudioCallback; /* you wrote this function elsewhere. */
-//     want.userdata = this;
-
-//     cout<<"sample_rate "<<this->m_codec_a_context->sample_rate<<endl;
-//     cout<<"channels "<<this->m_codec_a_context->channels<<endl;
-//     cout<<"samples "<<this->m_codec_a_context->frame_size<<endl;
-//     cout<<"samples "<<this->m_codec_a_context->sample_fmt<<endl;
-
-//     if (SDL_OpenAudio(&want, nullptr) < 0) {
-//         SDL_Log("Failed to open audio: %s", SDL_GetError());
-//         exit(127);
-//     }
-
-//     this->m_au_convert_ctx = swr_alloc();  
-//     this->m_au_convert_ctx = swr_alloc_set_opts(this->m_au_convert_ctx, 
-//         AV_CH_LAYOUT_STEREO, 
-//         AV_SAMPLE_FMT_S16,
-//         this->m_codec_a_context->sample_rate,  
-//         av_get_default_channel_layout(this->m_codec_a_context->channels),
-//         this->m_codec_a_context->sample_fmt, 
-//         this->m_codec_a_context->sample_rate, 0, nullptr);  
-//     swr_init(this->m_au_convert_ctx);  
-// }

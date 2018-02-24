@@ -7,10 +7,7 @@ extern "C" {
 #include <libavutil/frame.h>
 #include "libswresample/swresample.h" 
 }
-#include <stdio.h>
-#include <iostream>
-#include <thread>
-#include "decoder.h"
+#include "sdlbase.h"
 
 using namespace std;
 #define MAX_AUDIO_FRAME_SIZE 192000

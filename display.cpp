@@ -1,4 +1,6 @@
 #include "display.h"
+#include <stdio.h>
+#include <iostream>
 
 using namespace std;
 
@@ -46,13 +48,6 @@ Display::~Display(){
 }
 
 int Display::SDLInit(SDL_Window **window, SDL_Renderer **renderer){
-    // int ret = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO);
-    // if (ret != 0) {
-    //     SDL_Log("Unable to initialize SDL: %s", SDL_GetError());
-    //     SDL_Quit();
-    //     return 1;
-    // }
-
     *window = SDL_CreateWindow("GsPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN);
     if (*window == nullptr){
         SDL_Log("Unable to initialize windows: %s", SDL_GetError());
@@ -68,25 +63,5 @@ int Display::SDLInit(SDL_Window **window, SDL_Renderer **renderer){
         return 1;
     }
 
-    // if (SDL_CreateWindowAndRenderer(this->width, this->height, SDL_WINDOW_RESIZABLE, window, renderer)!=0) {
-    //     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
-    //     return 3;
-    // }
-
     return 0;
 }
-
-// void Display::ListenEvent(){
-//     SDL_Event e;
-//     while( !this->m_should_exit )
-//     {
-//         if (SDL_PollEvent( &e ) == 0){
-//             this_thread::sleep_for(chrono::milliseconds(200));
-//         }
-//         //User requests quit
-//         if( e.type == SDL_QUIT )
-//         {
-//             this->m_should_exit = true;
-//         }
-//     }
-// }
