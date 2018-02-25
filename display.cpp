@@ -8,7 +8,10 @@ Display::Display(){
     Display(1280, 800);
 }
 
-Display::Display(int width, int height):width(width),height(height){
+Display::Display(int width, int height){
+    this->height = height;
+    this->width = width;
+
     if(this->SDLInit(&(this->window), &(this->renderer))!=0){
         cerr<<"fail to open windows: "<<endl;
         exit(127);
@@ -23,6 +26,7 @@ Display::Display(int width, int height):width(width),height(height){
 }
 
 void Display::ShowFrame(){
+    SDL_SetWindowSize(this->window, this->width, this->height);
     SDL_RenderClear(this->renderer);
     // SDL_SetWindowTitle(this->window, "hahahha");
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -48,7 +52,7 @@ Display::~Display(){
 }
 
 int Display::SDLInit(SDL_Window **window, SDL_Renderer **renderer){
-    *window = SDL_CreateWindow("GsPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN);
+    *window = SDL_CreateWindow("GsPlayer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
     if (*window == nullptr){
         SDL_Log("Unable to initialize windows: %s", SDL_GetError());
         SDL_Quit();

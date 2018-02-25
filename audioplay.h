@@ -37,6 +37,8 @@ public:
     }
 
     AVFrame* PopAudioFrame();
+    //Overwrite ListenEvent do nothing
+    void ListenEvent(){return;}
 private:
     struct SwrContext *m_au_convert_ctx;
     AVCodecContext *m_codec_a_context;

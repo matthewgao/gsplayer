@@ -6,6 +6,7 @@ MediaDecoder::MediaDecoder(string file):m_video_index(-1),m_audio_index(-1){
     this->m_video_frame = make_shared<list<AVFrame*> >();
 
     av_register_all();
+    avformat_network_init();
     this->m_format_context = avformat_alloc_context();
     int ret = avformat_open_input(&(this->m_format_context), file.c_str(), nullptr, nullptr);
     if (ret != 0){
@@ -21,9 +22,9 @@ MediaDecoder::MediaDecoder(string file):m_video_index(-1),m_audio_index(-1){
     }
 
     for(int i = 0; i < this->m_format_context->nb_streams; i++){
-        if(this->m_format_context->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO){  
+        if(this->m_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){  
             this->m_video_index = i;
-        }else if(this->m_format_context->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
+        }else if(this->m_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO){
             this->m_audio_index = i;
         }
     }
@@ -40,7 +41,13 @@ MediaDecoder::MediaDecoder(string file):m_video_index(-1),m_audio_index(-1){
         exit(127);
     }
 
-    ret = avcodec_open2(this->m_codec_v_context, this->m_v_codec, nullptr);
+    // this->m_codec_v_context->thread_count = 8;
+    // this->m_codec_v_context->thread_type = FF_THREAD_FRAME;
+    AVDictionary *opts = nullptr;
+    // av_dict_set_int(&opts, "threads", 8, 0);
+    av_dict_set(&opts, "threads", "auto", 0);
+
+    ret = avcodec_open2(this->m_codec_v_context, this->m_v_codec, &opts);
     if (ret != 0){
         cerr<<"fail to open this->m_v_codec: "<<ret<<endl;
         exit(127);
@@ -91,8 +98,8 @@ void MediaDecoder::PushVideoFrame(AVFrame *frame){
         return;
     }
     
-    // cout<<"size"<<this->m_video_frame->size()<<endl;
-    while(this->m_video_frame->size() > 10){
+    // cout<<"video queue size"<<this->m_video_frame->size()<<endl;
+    while(this->m_video_frame->size() > 20){
         // cout<<"sleep 200ms"<<endl;
         this_thread::sleep_for(chrono::milliseconds(200));
     }
@@ -106,11 +113,12 @@ AVFrame* MediaDecoder::PopVideoFrame(){
     // lock_guard<std::mutex> guard(this->m_video_list_mutex);
     std::unique_lock<std::mutex> lk(this->m_video_list_mutex);
     if(this->m_video_frame->empty()){
-        // std::cerr << "Waiting... \n";
+        std::cerr << "Waiting... \n";
         this->m_video_cv.wait(lk);
         // this->m_video_cv.wait(lk, [&]{return !this->m_video_frame->empty();});
-        // std::cerr << "...finished waiting. not empty\n";
+        std::cerr << "...finished waiting. not empty\n";
     }
+    // cout<<"pop video"<<endl;
     AVFrame *f = this->m_video_frame->front();
     this->m_video_frame->pop_front();
     return f;
@@ -120,6 +128,7 @@ void MediaDecoder::ShowFrame(){
     while(!this->m_display->ShouldExit()){
         AVFrame* frame = this->PopVideoFrame();
         //PTS control
+        // cout<<"show a frame"<<endl;
         if(this->m_start_time == 0){
             this->m_start_time = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count();
             this->m_display->SetTexture(frame);
@@ -127,13 +136,17 @@ void MediaDecoder::ShowFrame(){
             av_frame_unref(frame);
             av_frame_free(&frame);
         }else{
-            // cout<<"show "<<av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)<<endl;
+            cout<<"time_base "<<av_q2d(this->m_time_base)<<endl;
+            cout<<"time_base num "<<this->m_time_base.num<<endl;
+            cout<<"time_base den "<<this->m_time_base.den<<endl;
+            cout<<"show "<<av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)<<endl;
             int64_t pts = av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)*1000*1000;
             int64_t now = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count();
             // cout<<"show "<<pts<<" "<<now<<endl;
             int64_t need_sleep = this->m_start_time + int64_t(pts) - now;
             this->m_display->SetTexture(frame);
-            // cout<<"time to wait "<<need_sleep<<endl;
+            cout<<"time to wait "<<need_sleep<<endl;
+            cout<<"frame pts "<<frame->pts<<endl;
             if (need_sleep > 0){
                 this_thread::sleep_for(chrono::microseconds(need_sleep));
             }
@@ -142,6 +155,7 @@ void MediaDecoder::ShowFrame(){
             av_frame_free(&frame);
         }
     }
+    cout<<"end of ShowFrame"<<endl;
 }
 
 void MediaDecoder::PlaySound(){
@@ -151,6 +165,7 @@ void MediaDecoder::PlaySound(){
 void MediaDecoder::Decoder(){
     AVFrame *pFrame = av_frame_alloc();
     while(!this->m_display->ShouldExit()){
+        // cout<<"Decoder loop"<<endl;
         AVPacket *pPacket = av_packet_alloc();
         if (pPacket == nullptr || this->m_format_context == nullptr){
              cout<<"nullptr"<<endl;
@@ -160,15 +175,17 @@ void MediaDecoder::Decoder(){
             cout<<"end"<<endl;
             break;
         }
-
+        // cout<<"av_read_frame v"<<endl;
         if (pPacket->stream_index == this->m_video_index) {
             int ret = avcodec_send_packet(this->m_codec_v_context, pPacket);
+            // cout<<"avcodec_send_packet v"<<endl;
             if (ret != 0){
                 cerr<<"fail to send packet: "<<ret<<endl;
                 continue;
             }
 
             ret = avcodec_receive_frame(this->m_codec_v_context, pFrame);
+            // cout<<"avcodec_receive_frame v"<<endl;
             if (ret == AVERROR(EAGAIN)){
                 cerr<<"try again: "<<ret<<av_err2str(ret)<<endl;
                 continue;
@@ -185,12 +202,14 @@ void MediaDecoder::Decoder(){
 
         if (pPacket->stream_index == this->m_audio_index) {
             int ret = avcodec_send_packet(this->m_codec_a_context, pPacket);
+            // cout<<"avcodec_send_packet a"<<endl;
             if (ret != 0){
                 cerr<<"fail to send audio packet: "<<ret<<endl;
                 continue;
             }
 
             ret = avcodec_receive_frame(this->m_codec_a_context, pFrame);
+            // cout<<"avcodec_receive_frame a"<<endl;
             if (ret == AVERROR(EAGAIN)){
                 cerr<<"try audio again: "<<ret<<av_err2str(ret)<<endl;
                 continue;
@@ -208,6 +227,7 @@ void MediaDecoder::Decoder(){
         av_packet_free(&pPacket);
         av_frame_unref(pFrame);
     }
+    cout<<"end of decoding"<<endl;
 }
 
 void MediaDecoder::Polling(){
