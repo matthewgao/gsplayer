@@ -21,11 +21,11 @@ OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 	echo $(CFLAGS)
 	g++ $(CFLAGS) $(DEBUG) $(LIBS) $(STD) -c -o $@ $<
 
-main:$(OBJ_FILES)
+gsplay:$(OBJ_FILES)
 	g++ $(CFLAGS) $(DEBUG) $(LIBS) $(STD)  -o $@ $^
 
-all:main
+all:gsplay
 	# g++ main.cpp -o main $(CFLAGS) $(LIBS)
 
 clean:
-	rm -rf main *.o
+	rm -rf main gsplay *.o

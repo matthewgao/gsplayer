@@ -131,22 +131,26 @@ void MediaDecoder::ShowFrame(){
         // cout<<"show a frame"<<endl;
         if(this->m_start_time == 0){
             this->m_start_time = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count();
+            this->m_start_pts = frame->pts;
             this->m_display->SetTexture(frame);
+            //this->m_display->SetWindowsSize();
             this->m_display->ShowFrame();
             av_frame_unref(frame);
             av_frame_free(&frame);
         }else{
             cout<<"time_base "<<av_q2d(this->m_time_base)<<endl;
+            cout<<"start_pts "<<this->m_start_pts<<endl;
+            cout<<"pts "<<frame->pts<<endl;
+            // cout<<"pts best"<<av_frame_get_best_effort_timestamp(frame)<<endl;
             cout<<"time_base num "<<this->m_time_base.num<<endl;
             cout<<"time_base den "<<this->m_time_base.den<<endl;
-            cout<<"show "<<av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)<<endl;
+            cout<<"pts in sec "<<av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)<<endl;
             int64_t pts = av_frame_get_best_effort_timestamp(frame)*av_q2d(this->m_time_base)*1000*1000;
             int64_t now = chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now().time_since_epoch()).count();
             // cout<<"show "<<pts<<" "<<now<<endl;
-            int64_t need_sleep = this->m_start_time + int64_t(pts) - now;
+            int64_t need_sleep = (this->m_start_time- now) + (int64_t(pts)-this->GetStartPtsInMicroSec()) ;
             this->m_display->SetTexture(frame);
             cout<<"time to wait "<<need_sleep<<endl;
-            cout<<"frame pts "<<frame->pts<<endl;
             if (need_sleep > 0){
                 this_thread::sleep_for(chrono::microseconds(need_sleep));
             }
@@ -156,6 +160,10 @@ void MediaDecoder::ShowFrame(){
         }
     }
     cout<<"end of ShowFrame"<<endl;
+}
+
+int64_t MediaDecoder::GetStartPtsInMicroSec(){
+    return this->m_start_pts*av_q2d(this->m_time_base)*1000*1000;
 }
 
 void MediaDecoder::PlaySound(){

@@ -42,6 +42,7 @@ public:
     void Decoder();
     void Polling();
     void PlaySound();
+    int64_t GetStartPtsInMicroSec();
 
     AVFormatContext* GetFormatCtx(){
         return this->m_format_context;
@@ -85,4 +86,5 @@ private:
     shared_ptr<AudioPlay> m_audioplay;
     AVRational m_time_base;
     int64_t m_start_time;
+    int64_t m_start_pts;
 };

@@ -25,6 +25,10 @@ Display::Display(int width, int height){
     SDL_SetRenderTarget(this->renderer, this->texture);
 }
 
+void Display::SetWindowsSize(){
+    SDL_SetWindowSize(this->window, this->width, this->height);
+}
+
 void Display::ShowFrame(){
     SDL_SetWindowSize(this->window, this->width, this->height);
     SDL_RenderClear(this->renderer);

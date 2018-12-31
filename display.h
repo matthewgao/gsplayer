@@ -16,6 +16,7 @@ public:
     Display(int width, int height);
     ~Display();
     void ShowFrame();
+    void SetWindowsSize();
     bool SetTexture(AVFrame *frame);
 
 private:
