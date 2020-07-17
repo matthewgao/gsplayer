@@ -30,23 +30,38 @@ void Display::SetWindowsSize(){
 }
 
 void Display::ShowFrame(){
+    // std::cout << "show frame" << endl;
     SDL_SetWindowSize(this->window, this->width, this->height);
     SDL_RenderClear(this->renderer);
     // SDL_SetWindowTitle(this->window, "hahahha");
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderCopy(this->renderer, this->texture, nullptr, nullptr);
     SDL_RenderPresent(this->renderer);
-    // SDL_Delay(30);
+    // SDL_Delay(300);
     return;
 }
 
 bool Display::SetTexture(AVFrame *frame){
-    SDL_UpdateYUVTexture(
-            this->texture, nullptr,  
-            frame->data[0], frame->linesize[0],  
-            frame->data[1], frame->linesize[1],  
-            frame->data[2], frame->linesize[2]
-    );
+    // SDL_UpdateYUVTexture(
+    //         this->texture, nullptr,  
+    //         frame->data[0], frame->linesize[0],  
+    //         frame->data[1], frame->linesize[1],  
+    //         frame->data[2], frame->linesize[2]
+    // );
+
+    if (frame->linesize[0] > 0 && frame->linesize[1] > 0 && frame->linesize[2] > 0) {
+        SDL_UpdateYUVTexture(this->texture, NULL, frame->data[0], frame->linesize[0],
+                                                frame->data[1], frame->linesize[1],
+                                                frame->data[2], frame->linesize[2]);
+    } else if (frame->linesize[0] < 0 && frame->linesize[1] < 0 && frame->linesize[2] < 0) {
+        SDL_UpdateYUVTexture(this->texture, NULL, frame->data[0] + frame->linesize[0] * (frame->height - 1), -frame->linesize[0],
+                                                frame->data[1] + frame->linesize[1] * (AV_CEIL_RSHIFT(frame->height, 1) - 1), -frame->linesize[1],
+                                                frame->data[2] + frame->linesize[2] * (AV_CEIL_RSHIFT(frame->height, 1) - 1), -frame->linesize[2]);
+    } else {
+        av_log(NULL, AV_LOG_ERROR, "Mixed negative and positive linesizes are not supported.\n");
+        return -1;
+    }
+
     return true;
 }
 

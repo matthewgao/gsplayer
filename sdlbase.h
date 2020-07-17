@@ -12,6 +12,7 @@ extern "C" {
 #include <thread>
 
 using namespace std;
+class MediaDecoder;
 
 class SDLBase{
 public:
@@ -23,7 +24,7 @@ public:
             return;
         }
     }
-    void ListenEvent();
+    void ListenEvent(MediaDecoder*);
     bool ShouldExit(){return this->m_should_exit;}
 protected:
     bool m_should_exit;

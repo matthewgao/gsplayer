@@ -1,13 +1,15 @@
 #include "sdlbase.h"
 #include <stdio.h>
+#include "decoder.h"
 
-void SDLBase::ListenEvent(){
+void SDLBase::ListenEvent(MediaDecoder *decoder){
     SDL_Event e;
     while( !this->m_should_exit )
     {
         if (SDL_PollEvent( &e ) == 0){
-            this_thread::sleep_for(chrono::milliseconds(200));
+            // this_thread::sleep_for(chrono::milliseconds(200));
         }
+        decoder->ShowFrame();
         //User requests quit
         if( e.type == SDL_QUIT )
         {

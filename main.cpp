@@ -22,10 +22,12 @@ int main(int argc, char *argv[]){
     shared_ptr<MediaDecoder> decoder = make_shared<MediaDecoder>(file);
     decoder->PlaySound();
     std::thread t1(bind(&MediaDecoder::Decoder, decoder));
-    std::thread t2(bind(&MediaDecoder::ShowFrame, decoder));
+    // std::thread t2(bind(&MediaDecoder::Polling, decoder));
     
     t1.detach();
-    t2.detach();
+    // t2.detach();
+
+    // decoder->ShowFrame();
     // decoder->PlaySound();
     decoder->Polling();
     return 0;
